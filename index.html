@@ -90,9 +90,6 @@
         const { useState, useEffect, useRef } = React; 
 
         // --- КОНФІГУРАЦІЯ API ---
-        // УВАГА: Цей ключ буде видимий у коді сторінки.
-        // Для продакшну рекомендується налаштувати обмеження HTTP referer у Google Cloud Console
-        // на домен https://indiefamily.my
         const API_KEY = "AIzaSyA4TNXtd_TTyz7QFKiXVPIPReHFRySlTeo";
 
         // --- ICONS ---
@@ -282,6 +279,7 @@
           const [error, setError] = useState(null);
           const [generatedStatute, setGeneratedStatute] = useState('');
           const [loadingLogs, setLoadingLogs] = useState([]);
+          const logContainerRef = useRef(null);
           
           // Initial State
           const [formData, setFormData] = useState({
@@ -328,27 +326,52 @@
           };
 
           useEffect(() => {
+            if (logContainerRef.current) {
+                logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+            }
+          }, [loadingLogs]);
+
+          useEffect(() => {
             if (step === 'generating') {
                 const logs = [
-                    "Встановлення захищеного з'єднання...",
-                    "Ідентифікація особового складу...",
-                    "Аналіз розвідувальних даних...",
-                    "Узгодження бюджету...",
-                    "Сканування присутності агентів Персевіренс та К'юріосіті...",
+                    "Запуск системи 'Гіменей v3.7'...",
+                    "Встановлення захищеного з'єднання з РАЦСом...",
+                    "Авторизація доступу: Рівень 'Вічне Кохання'...",
+                    "Зчитування біометричних даних закоханості...",
+                    "Аналіз сумісності гороскопів (пропущено)...",
+                    "Сканування рівня терпіння чоловіка...",
+                    "Сканування рівня терпіння дружини...",
+                    "Виявлення прихованих заначок (дані засекречено)...",
+                    "Калібрування датчиків 'Ти де?'...",
+                    "Аналіз стратегічних запасів шкарпеток...",
+                    "Узгодження кількості подушок та ковдр...",
+                    "Завантаження протоколів боротьби з павуками...",
+                    "Оптимізація маршрутів до холодильника...",
+                    "Перехоплення сигналів 'Хто миє посуд'...",
+                    "Блокування втручання зовнішніх сил (родичів)...",
+                    "Підрахунок коефіцієнта 'Мама казала'...",
+                    "Генерація тактичних схем примирення...",
+                    "Формування розділу про пульт від телевізора...",
+                    "Синхронізація списків бажань...",
+                    "Шифрування даних від сусідів...",
                     "Кодифікація сімейних цінностей...",
+                    "Перевірка на відповідність Женевській конвенції...",
                     "Формування бойового наказу...",
-                    "Друк документу...",
-                    "Фінальна вичитка..."
+                    "Друк документу на гербовому папері...",
+                    "Фінальна вичитка...",
+                    "Очікування електронного підпису..."
                 ];
                 let currentIndex = 0;
+                // Прискорений інтервал (800мс) для більшої динаміки
                 const interval = setInterval(() => {
                     if (currentIndex < logs.length) {
                         setLoadingLogs(prev => [...prev, logs[currentIndex]]);
                         currentIndex++;
                     } else {
-                        clearInterval(interval);
+                        // Якщо логи закінчились, а генерація ще йде
+                         setLoadingLogs(prev => [...prev, "Обробка складних алгоритмів..."]);
                     }
-                }, 1500);
+                }, 800);
                 return () => clearInterval(interval);
             } else {
                 setLoadingLogs([]);
@@ -632,9 +655,14 @@
              <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
               <div className="w-20 h-20 border-4 border-stone-300 border-t-amber-600 rounded-full animate-spin mb-8"></div>
               <h2 className="text-xl font-bold text-stone-800 mb-6 font-mono uppercase">ОБРОБКА ДАНИХ У ШТАБІ</h2>
-              <div className="w-full max-w-xs bg-stone-900 p-4 rounded-lg shadow-inner text-left h-48 overflow-y-auto font-mono text-xs text-green-500 border border-stone-600">
+              <div 
+                ref={logContainerRef}
+                className="w-full max-w-xs bg-stone-900 p-4 rounded-lg shadow-inner text-left h-48 overflow-y-auto font-mono text-xs text-green-500 border border-stone-600 transition-all"
+              >
                 {loadingLogs.map((log, index) => (
-                    <div key={index} className="mb-2"><span className="opacity-50">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}]</span> {log}</div>
+                    <div key={index} className="mb-2">
+                        <span className="opacity-50">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second: '2-digit'})}]</span> {log}
+                    </div>
                 ))}
                 <div className="cursor-blink">_</div>
               </div>
