@@ -1,1 +1,727 @@
-<!DOCTYPE html><html lang="uk"><head>    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">    <title>Сімейний Бойовий Статут v3.7</title>        <!-- Підключення Tailwind CSS -->    <script src="https://cdn.tailwindcss.com"></script>        <!-- Підключення React та ReactDOM -->    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>        <!-- Підключення Babel для JSX -->    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>    <!-- Шрифти -->    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">    <style>        body { font-family: 'Roboto Mono', monospace; -webkit-font-smoothing: antialiased; }        .font-serif { font-family: 'Playfair Display', serif; }        .font-mono { font-family: 'Roboto Mono', monospace; }                /* Текстура старого паперу для результату */        .paper-texture {            background-color: #fdfbf7;            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");        }        /* Стилізація слайдерів */        input[type=range] {            -webkit-appearance: none;             background: transparent;         }        input[type=range]::-webkit-slider-thumb {            -webkit-appearance: none;            height: 28px;            width: 28px;            border-radius: 50%;            background: #b45309;            cursor: pointer;            margin-top: -12px;             border: 3px solid #fff;            box-shadow: 0 2px 4px rgba(0,0,0,0.3);        }        input[type=range]::-webkit-slider-runnable-track {            width: 100%;            height: 6px;            cursor: pointer;            background: #d6d3d1;            border-radius: 3px;        }        /* Анімація радара */        @keyframes pulse-radar {            0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }            70% { box-shadow: 0 0 0 20px rgba(217, 119, 6, 0); }            100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }        }        .animate-radar {            animation: pulse-radar 2s infinite;        }        /* Курсор терміналу */        @keyframes blink {            0%, 100% { opacity: 1; }            50% { opacity: 0; }        }        .cursor-blink::after {            content: '█';            animation: blink 1s infinite;            margin-left: 4px;            color: #d97706;         }        @media print {          @page { margin: 0; size: auto; }          body { background-color: white; -webkit-print-color-adjust: exact; }          .no-print { display: none !important; }          .print-container {            position: absolute; left: 0; top: 0; width: 100%; min-height: 100vh;            margin: 0; padding: 20px !important; box-shadow: none !important; border: none !important;            background-color: white !important;          }          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }        }    </style></head><body class="bg-stone-300 text-stone-800 bg-[url('https://www.transparenttextures.com/patterns/concrete-wall.png')] min-h-screen">    <div id="root"></div>    <script type="text/babel" data-type="module">        const { useState, useEffect, useRef } = React;         // --- КОНФІГУРАЦІЯ API ---        // УВАГА: Цей ключ буде видимий у коді сторінки.        // Для продакшну рекомендується налаштувати обмеження HTTP referer у Google Cloud Console        // на домен https://indiefamily.my        const API_KEY = "AIzaSyA4TNXtd_TTyz7QFKiXVPIPReHFRySlTeo";        // --- ICONS ---        const IconWrapper = ({ children, size = 24, className = "" }) => (            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>                {children}            </svg>        );        const Shield = (props) => <IconWrapper {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></IconWrapper>;        const Heart = (props) => <IconWrapper {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></IconWrapper>;        const Send = (props) => <IconWrapper {...props}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></IconWrapper>;        const AlertCircle = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconWrapper>;        const ChevronRight = (props) => <IconWrapper {...props}><path d="m9 18 6-6-6-6"/></IconWrapper>;        const ChevronDown = (props) => <IconWrapper {...props}><path d="m6 9 6 6 6-6"/></IconWrapper>;        const FileText = (props) => <IconWrapper {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconWrapper>;        const Star = (props) => <IconWrapper {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconWrapper>;        const Printer = (props) => <IconWrapper {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></IconWrapper>;        const Coffee = (props) => <IconWrapper {...props}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconWrapper>;        const Trash2 = (props) => <IconWrapper {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconWrapper>;        const Tv = (props) => <IconWrapper {...props}><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></IconWrapper>;        const Moon = (props) => <IconWrapper {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></IconWrapper>;        const Bug = (props) => <IconWrapper {...props}><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></IconWrapper>;        const Users = (props) => <IconWrapper {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconWrapper>;        const Utensils = (props) => <IconWrapper {...props}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></IconWrapper>;        const Droplet = (props) => <IconWrapper {...props}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></IconWrapper>;        const Cat = (props) => <IconWrapper {...props}><path d="M12 5c.67 0 1.35.09 2 .26 1.78-2 5.03-2.84 6.42-2.26 1.4.58-.42 7-.42 7 .57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3.1-9-7.56c0-1.25.5-2.4 1-3.44 0 0-1.89-6.42-.5-7 1.39-.58 4.67.26 6.43 2.26.64-.17 1.33-.26 2-.26z"/><path d="M9 13h.01"/><path d="M15 13h.01"/></IconWrapper>;        const ShoppingBag = (props) => <IconWrapper {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></IconWrapper>;        const Gavel = (props) => <IconWrapper {...props}><path d="m14 13-7.5 7.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L11 10"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/></IconWrapper>;        const Volume2 = (props) => <IconWrapper {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></IconWrapper>;        const Award = (props) => <IconWrapper {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></IconWrapper>;        // --- HELPER FUNCTIONS ---        const cleanText = (text) => {          if (!text) return "";          return text.replace(/\*\*/g, '').replace(/\*/g, '');        };        // --- UI COMPONENTS ---        const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '' }) => {          const baseStyle = "w-full py-4 px-6 font-mono text-sm uppercase tracking-wider font-bold transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden select-none touch-manipulation transform active:scale-95 rounded-sm";                    const variants = {            primary: "bg-stone-900 text-amber-50 hover:bg-stone-800 border-b-4 border-amber-700 shadow-xl",            secondary: "bg-stone-200 text-stone-800 hover:bg-stone-300 border-b-4 border-stone-400 shadow-md",            action: "bg-amber-700 text-white hover:bg-amber-800 border-b-4 border-amber-900 shadow-xl"          };          return (            <button               onClick={onClick}               disabled={disabled}              className={`${baseStyle} ${variants[variant]} ${disabled ? 'opacity-50 cursor-not-allowed border-none' : ''} ${className}`}            >              {children}            </button>          );        };        const InputField = ({ label, value, onChange, placeholder, icon: Icon, className = "" }) => (          <div className={`mb-6 ${className}`}>            <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-2 flex items-center gap-2">              {Icon && <Icon size={18} className="text-amber-700" />}              {label}            </label>            <input              type="text"              value={value}              onChange={(e) => onChange(e.target.value)}              placeholder={placeholder}              className="w-full bg-stone-50 border-b-2 border-stone-300 text-stone-900 p-4 text-base font-serif focus:outline-none focus:border-amber-600 focus:bg-white transition-colors placeholder-stone-400 rounded-t-md shadow-sm"            />          </div>        );        const SelectField = ({ label, value, onChange, options, icon: Icon }) => (          <div className="mb-6">             <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-2 flex items-center gap-2">              {Icon && <Icon size={18} className="text-amber-700" />}              {label}            </label>            <div className="relative">              <select                value={value}                onChange={(e) => onChange(e.target.value)}                className="w-full bg-stone-50 border-b-2 border-stone-300 text-stone-900 p-4 text-base font-serif focus:outline-none focus:border-amber-600 focus:bg-white transition-colors appearance-none rounded-t-md cursor-pointer pr-10 shadow-sm"              >                <option value="" disabled>-- Оберіть рішення --</option>                {options.map((opt, i) => (                  <option key={i} value={opt}>{opt}</option>                ))}              </select>              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">                <ChevronDown size={24} />              </div>            </div>          </div>        );        const SliderField = ({ label, value, onChange, min, max, icon: Icon, getLabel }) => (            <div className="mb-6 p-5 bg-stone-100 rounded border border-stone-200 shadow-sm">                <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-4 flex items-center gap-2">                    {Icon && <Icon size={18} className="text-amber-700" />}                    {label}                </label>                <div className="flex items-center gap-4">                    <input                         type="range"                         min={min}                         max={max}                         value={value}                         onChange={(e) => onChange(Number(e.target.value))}                        className="w-full h-2 bg-stone-300 rounded-lg appearance-none cursor-pointer"                    />                    <div className="w-14 text-center font-bold text-xl font-serif text-amber-800">{value}</div>                </div>                <div className="mt-3 text-right text-xs font-mono font-bold text-amber-700 uppercase tracking-wide">                    {getLabel(value)}                </div>            </div>        );        const ToggleAsset = ({ label, checked, onChange, icon: Icon }) => (            <div                 onClick={() => onChange(!checked)}                className={`cursor-pointer p-4 rounded border transition-all duration-200 flex items-center justify-between gap-3 mb-3 ${checked ? 'bg-stone-800 border-stone-900 text-amber-50 shadow-lg transform scale-[1.01]' : 'bg-white border-stone-300 text-stone-500 hover:bg-stone-50'}`}            >                <div className="flex items-center gap-3">                    {Icon && <Icon size={22} className={checked ? "text-amber-500" : "text-stone-400"} />}                    <span className="font-bold text-sm uppercase tracking-wide">{label}</span>                </div>                <div className={`w-6 h-6 rounded-sm border-2 flex items-center justify-center ${checked ? 'border-amber-500 bg-amber-600' : 'border-stone-300'}`}>                    {checked && <ChevronDown size={18} className="text-white" />}                </div>            </div>        );        const SectionHeader = ({ title, step }) => (          <div className="flex items-center gap-4 my-10">            <div className="h-px bg-stone-300 flex-grow"></div>            <div className="flex flex-col items-center">                <span className="text-xs font-mono uppercase tracking-widest text-amber-700 font-bold mb-1">Сектор {step}</span>                <span className="text-sm font-black uppercase tracking-wide text-stone-800 text-center">{title}</span>            </div>            <div className="h-px bg-stone-300 flex-grow"></div>          </div>        );        const Card = ({ children, title, subtitle, className = '' }) => (          <div className={`w-full max-w-md mx-auto bg-[#f4f4f0] shadow-2xl border border-stone-300 relative ${className}`}>            <div className="absolute -top-3 left-0 w-full flex justify-between px-2">                 <div className="bg-stone-800 text-amber-50 px-4 py-1 text-[10px] font-mono uppercase tracking-widest shadow-sm z-20">                    CLASSIFIED // EYES ONLY                 </div>                 <div className="flex gap-1 pt-1">                    <div className="w-2 h-2 bg-stone-300 rounded-full"></div>                    <div className="w-2 h-2 bg-stone-300 rounded-full"></div>                    <div className="w-2 h-2 bg-stone-300 rounded-full"></div>                 </div>            </div>                        <div className="p-5 pt-10 pb-16 relative overflow-hidden">              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03]">                <Shield size={300} />              </div>              {title && (                <div className="mb-8 border-b-4 border-double border-stone-300 pb-4 text-center relative z-10">                  <h2 className="text-2xl md:text-3xl font-black text-stone-900 uppercase tracking-tighter font-serif leading-tight mb-2">                    {title}                  </h2>                  {subtitle && <p className="text-amber-700 font-mono text-xs mt-2 uppercase tracking-widest font-bold">{subtitle}</p>}                </div>              )}                            <div className="relative z-10">                {children}              </div>                            <div className="absolute bottom-4 right-4 opacity-10 rotate-[-15deg] border-4 border-stone-900 text-stone-900 p-2 font-black text-lg uppercase rounded pointer-events-none z-0">                ТІЛЬКИ ДЛЯ СЛУЖБОВОГО КОРИСТУВАННЯ              </div>            </div>          </div>        );        // --- MAIN APP ---        function FamilyStatuteApp() {          const [step, setStep] = useState('intro');           const [error, setError] = useState(null);          const [generatedStatute, setGeneratedStatute] = useState('');          const [loadingLogs, setLoadingLogs] = useState([]);                    // Initial State          const [formData, setFormData] = useState({            husbandName: '',            husbandRank: '', // NEW            husbandCallsign: '',            wifeName: '',            wifeRank: '', // NEW            wifeCallsign: '',                        // Select Inputs            financeChief: '',             foodSupply: '',             dishWashing: '',            garbageDisposal: '',            conflictWeaponWife: '',            conflictWeaponHusband: '',            peaceTreaty: '',            decisionMaking: '',            shoppingLogistics: '',            spiderProtocol: '',            inLawsDiplomacy: '',                        // Sliders            patienceLevelHusband: 50,            patienceLevelWife: 50,                        // Toggles            cats: {                cat1: false,                cat2: false            },                        // Text inputs            strategicGoal: '',            morningBathroom: '',          });          const toggleCat = (key) => {              setFormData(prev => ({                  ...prev,                  cats: { ...prev.cats, [key]: !prev.cats[key] }              }));          };          useEffect(() => {            if (step === 'generating') {                const logs = [                    "Встановлення захищеного з'єднання...",                    "Ідентифікація особового складу...",                    "Аналіз розвідувальних даних...",                    "Узгодження бюджету...",                    "Сканування присутності агентів Персевіренс та К'юріосіті...",                    "Кодифікація сімейних цінностей...",                    "Формування бойового наказу...",                    "Друк документу...",                    "Фінальна вичитка..."                ];                let currentIndex = 0;                const interval = setInterval(() => {                    if (currentIndex < logs.length) {                        setLoadingLogs(prev => [...prev, logs[currentIndex]]);                        currentIndex++;                    } else {                        clearInterval(interval);                    }                }, 1500);                return () => clearInterval(interval);            } else {                setLoadingLogs([]);            }          }, [step]);          // --- ОНОВЛЕНА ФУНКЦІЯ ГЕНЕРАЦІЇ ЧЕРЕЗ GEMINI API ---          const generateDirectly = async () => {            setStep('generating');            setError(null);            try {              const catsSelected = [];              if (formData.cats.cat1) catsSelected.push("Кіт Персевіренс");              if (formData.cats.cat2) catsSelected.push("Кіт К'юріосіті");                            const catsStatus = catsSelected.length > 0 ? `Позаштатні бійці: ${catsSelected.join(" та ")}` : "Тимчасова відсутність котів";              const husbandTitle = formData.husbandRank || "Чоловік";              const wifeTitle = formData.wifeRank || "Дружина";                            const safeData = {                 husbandName: formData.husbandName || "Чоловік",                 husbandRank: husbandTitle,                 husbandCallsign: formData.husbandCallsign || "V",                                  wifeName: formData.wifeName || "Дружина",                 wifeRank: wifeTitle,                 wifeCallsign: formData.wifeCallsign || "Квіточка",                                  financeChief: formData.financeChief || "Спільний котел",                 foodSupply: formData.foodSupply || "Доставка",                 dishWashing: formData.dishWashing || "Посудомийка",                 garbageDisposal: formData.garbageDisposal || "По черзі",                 conflictWeaponWife: formData.conflictWeaponWife || "Мовчання",                 conflictWeaponHusband: formData.conflictWeaponHusband || "Відступ",                 peaceTreaty: formData.peaceTreaty || "Переговори",                 decisionMaking: formData.decisionMaking || "Рада",                 shoppingLogistics: formData.shoppingLogistics || "Разом",                 spiderProtocol: formData.spiderProtocol || "Евакуація",                 inLawsDiplomacy: formData.inLawsDiplomacy || "Нейтралітет",                 strategicGoal: formData.strategicGoal || "Щастя",                 morningBathroom: formData.morningBathroom || "Хто встиг",                 patienceLevelHusband: formData.patienceLevelHusband,                 patienceLevelWife: formData.patienceLevelWife,              };              const systemPrompt = `                Ти - досвідчений штабний писар з бездоганним знанням статутів та добрим гумором.                Твоє завдання: Скласти "Бойовий Статут Сімейного Життя" (БССЖ) для молодят Віктора та Насті.                                КОНТЕКСТ:                Дата створення підрозділу: 19.11.2025.                Документ адресується виключно молодятам. Не згадуй про третіх осіб (братів, родичів).                                УВАГА ДО ТЕРМІНОЛОГІЇ (КРИТИЧНО ВАЖЛИВО):                1. Використовуй ОФІЦІЙНІ назви служб тилу ЗСУ, але адаптуй їх до побуту.                2. "Продовольча служба" - відповідає за їжу.                3. "Фінансова служба" - відповідає за гроші. Це окрема служба.                4. "Речова служба" або "Служба матеріально-технічного забезпечення" (МТЗ) - відповідає за покупки, майно.                5. "МПЗ" (Морально-психологічне забезпечення) - відповідає за настрій, примирення.                6. НІКОЛИ не пиши "Начфін" чи "Начпрод" у дужках після назви служби. Просто пиши "Фінансова служба" або "Продовольча служба".                7. Уникай політичних термінів (мінські домовленості). Використовуй "Подружні домовленості", "Пакт про кохання".                8. Щодо їжі: "Особовий склад зобов'язаний завчасно подавати заявки на харчове постачання", а не "командири".                9. Віктор - не сапер. Не згадуй про розмінування.                ОСОБОВИЙ СКЛАД:                - ${safeData.husbandRank} ${safeData.husbandName} (Позивний: ${safeData.husbandCallsign})                - ${safeData.wifeRank} ${safeData.wifeName} (Позивний: ${safeData.wifeCallsign})                - Додатковий склад: ${catsStatus}.                РОЗВІДУВАЛЬНІ ДАНІ:                1. Фінансова служба: ${safeData.financeChief}                2. Продовольча служба (Їжа): ${safeData.foodSupply}                3. Дезактивація посуду: ${safeData.dishWashing}                4. Служба утилізації відходів (Сміття): ${safeData.garbageDisposal}                5. Тактика під час сварки (Дружина): ${safeData.conflictWeaponWife}                6. Тактика під час сварки (Чоловік): ${safeData.conflictWeaponHusband}                7. Протокол відновлення миру: ${safeData.peaceTreaty}                8. Порядок прийняття рішень: ${safeData.decisionMaking}                9. МТЗ (Покупки): ${safeData.shoppingLogistics}                10. Реагування на біологічні загрози (Павуки): ${safeData.spiderProtocol}                11. Зовнішні зв'язки (Батьки): ${safeData.inLawsDiplomacy}                12. Зайняття стратегічних висот (Ванна): ${safeData.morningBathroom}                13. Рівень терпіння (${safeData.husbandRank}): ${safeData.patienceLevelHusband}%                14. Рівень терпіння (${safeData.wifeRank}): ${safeData.patienceLevelWife}%                15. Стратегічна ціль: ${safeData.strategicGoal}                СТРУКТУРА (Markdown):                1. Заголовок (Наказ № 19-11/2025).                2. Преамбула (Урочисте оголошення про створення підрозділу).                3. Розділ I: Тилове та Матеріальне Забезпечення (Їжа, МТЗ, Фінанси, Сміття, Посуд).                4. Розділ II: Внутрішній Порядок та Розпорядок (Ванна, Коти).                5. Розділ III: Морально-Психологічне Забезпечення (МПЗ) (Сварки, Терпіння, Примирення).                6. Розділ IV: Зовнішні Зв'язки та Безпека (Родичі, Павуки).                7. Розділ V: Бойовий Наказ (Стратегічна ціль).                Тон: Теплий, дотепний, з повагою до військової справи, українська мова. Без жирного шрифту.              `;                            // --- ПРЯМИЙ ВИКЛИК GEMINI API ---              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {                  method: 'POST',                  headers: {                      'Content-Type': 'application/json',                  },                  body: JSON.stringify({                    contents: [{                        parts: [{ text: systemPrompt }]                    }]                  })              });              if (!response.ok) {                 const errorData = await response.json();                 throw new Error(errorData.error?.message || "Помилка сервера AI");              }              const data = await response.json();              // Отримання тексту з відповіді Gemini              const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;              if (!generatedText) {                  throw new Error("Отримана порожня відповідь");              }              setGeneratedStatute(generatedText);              setStep('result');            } catch (err) {              console.error("Error:", err);              setError("Штаб не відповідає. Спробуйте пізніше. " + err.message);              setStep('quiz');            }          };          const renderIntro = () => (            <Card title="Ініціалізація Підрозділу" subtitle="Створення нової тактичної одиниці">              <div className="space-y-6">                <div className="flex flex-col gap-6">                  <div className="bg-white p-5 rounded border border-stone-200 shadow-sm">                    <div className="mb-4 bg-stone-900 text-white text-xs font-bold px-2 py-1 inline-block uppercase tracking-wider">Особовий склад</div>                    <InputField                       label="Ім'я Нареченого"                       value={formData.husbandName}                       onChange={(v) => setFormData({...formData, husbandName: v})}                      placeholder=""                      icon={Star}                    />                    <InputField                       label="Звання"                       value={formData.husbandRank}                       onChange={(v) => setFormData({...formData, husbandRank: v})}                      placeholder=""                      icon={Award}                    />                     <InputField                       label="Позивний"                       value={formData.husbandCallsign}                       onChange={(v) => setFormData({...formData, husbandCallsign: v})}                      placeholder=""                      icon={Shield}                      className="mb-0"                    />                  </div>                  <div className="bg-white p-5 rounded border border-stone-200 shadow-sm">                    <div className="mb-4 bg-amber-700 text-white text-xs font-bold px-2 py-1 inline-block uppercase tracking-wider">Особовий склад</div>                    <InputField                       label="Ім'я Нареченої"                       value={formData.wifeName}                       onChange={(v) => setFormData({...formData, wifeName: v})}                      placeholder=""                      icon={Heart}                    />                    <InputField                       label="Звання"                       value={formData.wifeRank}                       onChange={(v) => setFormData({...formData, wifeRank: v})}                      placeholder=""                      icon={Award}                    />                     <InputField                       label="Позивний"                       value={formData.wifeCallsign}                       onChange={(v) => setFormData({...formData, wifeCallsign: v})}                      placeholder=""                      icon={Shield}                      className="mb-0"                    />                  </div>                </div>                <div className="pt-4 pb-4">                  <Button onClick={() => setStep('quiz')} disabled={!formData.husbandName || !formData.wifeName} variant="action">                    Розпочати злагодження <ChevronRight />                  </Button>                </div>              </div>            </Card>          );          const renderQuiz = () => (            <Card title="Тактичний Опитувальник" subtitle="Збір розвідданих">              <div className="space-y-2">                                {/* БЛОК 1 */}                <SectionHeader title="Служби Тилу" step="I" />                <div className="flex flex-col gap-0">                   <SelectField label="Фінансова служба" value={formData.financeChief} onChange={(v) => setFormData({...formData, financeChief: v})}                      options={["Спільний котел НАТО", "Кожен ховає своє", "Вона - Міністр, я - спонсор"]} icon={FileText} />                   <SelectField label="Продовольча служба" value={formData.foodSupply} onChange={(v) => setFormData({...formData, foodSupply: v})}                      options={["Чоловік - шеф, дружина - дегустатор", "Спільна польова кухня", "Аутсорс (доставка)", "Тільки ресторан"]} icon={Utensils} />                   <SelectField label="Дезактивація посуду" value={formData.dishWashing} onChange={(v) => setFormData({...formData, dishWashing: v})}                      options={["Посудомийна машина", "Хто останній їв", "По черзі", "Камінь-ножиці-папір"]} icon={Droplet} />                   <SelectField label="МТЗ (Покупки)" value={formData.shoppingLogistics} onChange={(v) => setFormData({...formData, shoppingLogistics: v})}                      options={["Спільний рейд", "Дружина обирає, чоловік несе", "Онлайн-доставка", "Кожен собі"]} icon={ShoppingBag} />                </div>                {/* БЛОК 2 */}                <SectionHeader title="Внутрішній Порядок" step="II" />                <div className="flex flex-col gap-0">                    <SelectField label="Зайняття ванної (ранком)" value={formData.morningBathroom} onChange={(v) => setFormData({...formData, morningBathroom: v})}                      options={["Хто перший встав", "Дружина має пріоритет", "Жива черга", "Спільні процедури"]} icon={Coffee} />                    <SelectField label="Утилізація відходів" value={formData.garbageDisposal} onChange={(v) => setFormData({...formData, garbageDisposal: v})}                      options={["Чоловік", "Хто йде гуляти", "По черзі", "Накопичуємо до критичної маси"]} icon={Trash2} />                    <SelectField label="Прийняття рішень" value={formData.decisionMaking} onChange={(v) => setFormData({...formData, decisionMaking: v})}                      options={["Консенсус", "Чоловік - стратег, Дружина - тактик", "Рада старійшин", "Підкидання монети"]} icon={Gavel} />                                        <div className="mt-4 mb-6">                        <div className="bg-white p-5 rounded border border-stone-200 shadow-inner">                            <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-4 flex items-center gap-2"><Cat size={18} className="text-amber-700"/> Позаштатні бійці</label>                            <div className="flex flex-col gap-3">                                <ToggleAsset label="Кіт Персевіренс (В строю)" checked={formData.cats.cat1} onChange={() => toggleCat('cat1')} icon={Cat} />                                <ToggleAsset label="Кіт К'юріосіті (В строю)" checked={formData.cats.cat2} onChange={() => toggleCat('cat2')} icon={Cat} />                            </div>                        </div>                    </div>                </div>                {/* БЛОК 3 */}                <SectionHeader title="МПЗ та Безпека" step="III" />                <div className="flex flex-col gap-0">                    <SelectField label="Тактика Дружини під час сварки" value={formData.conflictWeaponWife} onChange={(v) => setFormData({...formData, conflictWeaponWife: v})}                      options={["Тактичне мовчання", "Артилерійський крик", "Сльозогінний газ (сльози)", "Дипломатичні аргументи"]} icon={AlertCircle} />                    <SelectField label="Тактика Чоловіка під час сварки" value={formData.conflictWeaponHusband} onChange={(v) => setFormData({...formData, conflictWeaponHusband: v})}                      options={["Стратегічний відступ", "Глуха оборона (Мороз)", "Контратака жартами", "Визнання провини"]} icon={Shield} />                    <SelectField label="Спосіб примирення" value={formData.peaceTreaty} onChange={(v) => setFormData({...formData, peaceTreaty: v})}                      options={["Стіл переговорів (вечеря)", "Обмін полоненими (подарунки)", "Пакт про кохання (обійми)", "Бурхливе перемир'я (ліжко)"]} icon={Heart} />                    <SelectField label="Протокол 'Павук'" value={formData.spiderProtocol} onChange={(v) => setFormData({...formData, spiderProtocol: v})}                      options={["Чоловік ліквідує", "Евакуація всього будинку", "Він тепер живе з нами", "Дружина розбирається"]} icon={Bug} />                    <SelectField label="Зовнішні зв'язки (Батьки)" value={formData.inLawsDiplomacy} onChange={(v) => setFormData({...formData, inLawsDiplomacy: v})}                      options={["Дипломатичний нейтралітет", "Повна інтеграція", "Візовий режим", "Тільки по святах"]} icon={Users} />                </div>                {/* Слайдери */}                <div className="mt-6 flex flex-col gap-4">                    <SliderField label={`Рівень терпіння (${formData.husbandName || "Чоловік"})`} value={formData.patienceLevelHusband} onChange={(v) => setFormData({...formData, patienceLevelHusband: v})} min={0} max={100} icon={Volume2}                         getLabel={(v) => v < 20 ? "Критичний" : v < 80 ? "Стабільний" : "Залізобетон"} />                    <SliderField label={`Рівень терпіння (${formData.wifeName || "Дружина"})`} value={formData.patienceLevelWife} onChange={(v) => setFormData({...formData, patienceLevelWife: v})} min={0} max={100} icon={Volume2}                         getLabel={(v) => v < 20 ? "Критичний" : v < 80 ? "Стабільний" : "Ангельський"} />                </div>                                <div className="bg-stone-100 p-5 rounded border border-stone-200 mt-4 mb-4">                    <InputField label="Головна стратегічна ціль (текстом)" value={formData.strategicGoal} onChange={(v) => setFormData({...formData, strategicGoal: v})} placeholder="" icon={Star} className="mb-0" />                </div>                {error && (                  <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mt-6 flex items-start gap-3">                    <AlertCircle className="mt-1 flex-shrink-0" />                    <div><strong className="font-bold block">Увага!</strong><span>{error}</span></div>                  </div>                )}                <div className="pt-8 flex flex-col gap-4 pb-4">                   <Button onClick={generateDirectly} variant="action" className="animate-radar">ЗАТВЕРДИТИ СТАТУТ <Send size={16} /></Button>                   <Button variant="secondary" onClick={() => setStep('intro')}>Назад</Button>                </div>              </div>            </Card>          );          const renderLoading = () => (             <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">              <div className="w-20 h-20 border-4 border-stone-300 border-t-amber-600 rounded-full animate-spin mb-8"></div>              <h2 className="text-xl font-bold text-stone-800 mb-6 font-mono uppercase">ОБРОБКА ДАНИХ У ШТАБІ</h2>              <div className="w-full max-w-xs bg-stone-900 p-4 rounded-lg shadow-inner text-left h-48 overflow-y-auto font-mono text-xs text-green-500 border border-stone-600">                {loadingLogs.map((log, index) => (                    <div key={index} className="mb-2"><span className="opacity-50">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}]</span> {log}</div>                ))}                <div className="cursor-blink">_</div>              </div>              <p className="text-stone-500 mt-4 text-xs uppercase tracking-widest">Система "Гіменей"</p>            </div>          );          const renderResult = () => (            <div className="max-w-4xl mx-auto py-4 md:py-8 px-4">              <div className="mb-6 flex flex-col gap-4 no-print">                <Button onClick={() => window.print()} variant="primary"><Printer size={16} /> ДРУКУВАТИ НАКАЗ</Button>                <Button variant="secondary" onClick={() => setStep('intro')}>Новий рапорт</Button>              </div>                            <div className="bg-[#fffdf5] text-stone-900 p-6 md:p-12 shadow-2xl border border-stone-300 relative print-container paper-texture">                <div className="border-b-4 border-double border-stone-800 pb-6 mb-8 flex flex-col gap-4">                  <div>                     <div className="text-amber-800 font-bold text-xs uppercase tracking-[0.2em] mb-2 text-center md:text-left">Міністерство Щасливих Справ</div>                     <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter font-serif text-stone-900 leading-tight text-center md:text-left">Бойовий Статут<br/>Сімейного Корпусу</h1>                  </div>                  <div className="text-center md:text-right">                     <div className="inline-flex items-center gap-2 text-stone-600 border border-stone-800 px-3 py-1 rounded-sm">                        <Shield size={14} /><span className="font-mono text-xs uppercase font-bold">Наказ № 19-11/2025</span>                     </div>                  </div>                </div>                <div className="prose prose-stone max-w-none font-serif leading-relaxed whitespace-pre-line text-stone-800">                    {generatedStatute.split('\n').map((line, i) => {                        let cleanedLine = cleanText(line).trim();                        if (!cleanedLine) return <br key={i}/>;                                                if (cleanedLine.startsWith('#')) {                           const textWithoutHashes = cleanedLine.replace(/^#+\s*/, '');                           if (cleanedLine.startsWith('# ')) {                                return <h2 key={i} className="text-xl font-black mt-8 mb-4 text-center uppercase tracking-widest text-stone-900 border-b-2 border-amber-700 pb-2 inline-block w-full">{textWithoutHashes}</h2>;                           }                           return <h3 key={i} className="text-lg font-bold mt-6 mb-2 uppercase text-amber-900 flex items-center gap-2"><div className="w-2 h-2 bg-amber-700 rounded-full flex-shrink-0"></div>{textWithoutHashes}</h3>;                        }                                                if (cleanedLine.startsWith('-') || cleanedLine.startsWith('*')) {                            return <div key={i} className="flex gap-3 ml-0 mb-3 items-start"><span className="text-amber-700 mt-1.5 text-xs flex-shrink-0">●</span><span className="text-justify">{cleanedLine.replace(/^[-*]\s*/, '')}</span></div>;                        }                        return <p key={i} className="mb-3 text-justify">{cleanedLine}</p>;                    })}                </div>                <div className="mt-16 pt-8 border-t border-stone-400 flex flex-col gap-12 break-inside-avoid">                  <div className="relative">                    <p className="text-[10px] font-bold uppercase mb-8 tracking-widest text-stone-500">Затверджую ({formData.husbandRank})</p>                    <div className="font-serif text-2xl text-blue-900 absolute top-6 left-4 -rotate-2 opacity-80 italic">{formData.husbandName}</div>                    <div className="h-0.5 bg-stone-900 w-full mt-8"></div>                  </div>                  <div className="relative">                    <p className="text-[10px] font-bold uppercase mb-8 tracking-widest text-stone-500">Погоджено ({formData.wifeRank})</p>                    <div className="font-serif text-2xl text-red-900 absolute top-6 left-4 -rotate-1 opacity-80 italic">{formData.wifeName}</div>                    <div className="h-0.5 bg-stone-900 w-full mt-8"></div>                  </div>                </div>                <div className="absolute bottom-32 right-6 opacity-80 rotate-[-12deg] border-[6px] border-amber-800 text-amber-800 px-4 py-2 font-black text-lg uppercase rounded shadow-inner hidden md:block print:block mix-blend-multiply">                  ЦІЛКОМ ТАЄМНО<br/><span className="text-xs font-mono block text-center mt-1">ОБ'ЄКТ: ЩАСЛИВА СІМ'Я</span>                </div>              </div>            </div>          );          return (            <div className="min-h-screen pb-10 md:pb-20">              <header className="bg-stone-900 text-amber-500 p-4 text-center shadow-lg no-print relative overflow-hidden sticky top-0 z-50">                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-stone-900 via-amber-600 to-stone-900"></div>                <div className="flex justify-center items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em]">                    <Star size={12} /> Military-Grade Family Planning System v3.7 <Star size={12} />                </div>              </header>              <main className="container mx-auto pt-6 px-4 print:pt-0 print:px-0 print:max-w-none">                {step === 'intro' && renderIntro()}                {step === 'quiz' && renderQuiz()}                {step === 'generating' && renderLoading()}                {step === 'result' && renderResult()}              </main>            </div>          );        }        const root = ReactDOM.createRoot(document.getElementById('root'));        root.render(<FamilyStatuteApp />);    </script></body></html>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Сімейний Бойовий Статут v3.7</title>
+    
+    <!-- Підключення Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Підключення React та ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Підключення Babel для JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Шрифти -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Roboto Mono', monospace; -webkit-font-smoothing: antialiased; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        
+        /* Текстура старого паперу для результату */
+        .paper-texture {
+            background-color: #fdfbf7;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        /* Стилізація слайдерів */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #b45309;
+            cursor: pointer;
+            margin-top: -12px; 
+            border: 3px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #d6d3d1;
+            border-radius: 3px;
+        }
+        /* Анімація радара */
+        @keyframes pulse-radar {
+            0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(217, 119, 6, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+        }
+        .animate-radar {
+            animation: pulse-radar 2s infinite;
+        }
+        /* Курсор терміналу */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .cursor-blink::after {
+            content: '█';
+            animation: blink 1s infinite;
+            margin-left: 4px;
+            color: #d97706; 
+        }
+        @media print {
+          @page { margin: 0; size: auto; }
+          body { background-color: white; -webkit-print-color-adjust: exact; }
+          .no-print { display: none !important; }
+          .print-container {
+            position: absolute; left: 0; top: 0; width: 100%; min-height: 100vh;
+            margin: 0; padding: 20px !important; box-shadow: none !important; border: none !important;
+            background-color: white !important;
+          }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body class="bg-stone-300 text-stone-800 bg-[url('https://www.transparenttextures.com/patterns/concrete-wall.png')] min-h-screen">
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useRef } = React; 
+
+        // --- КОНФІГУРАЦІЯ API ---
+        // УВАГА: Цей ключ буде видимий у коді сторінки.
+        // Для продакшну рекомендується налаштувати обмеження HTTP referer у Google Cloud Console
+        // на домен https://indiefamily.my
+        const API_KEY = "AIzaSyA4TNXtd_TTyz7QFKiXVPIPReHFRySlTeo";
+
+        // --- ICONS ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+        const Shield = (props) => <IconWrapper {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></IconWrapper>;
+        const Heart = (props) => <IconWrapper {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></IconWrapper>;
+        const Send = (props) => <IconWrapper {...props}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></IconWrapper>;
+        const AlertCircle = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconWrapper>;
+        const ChevronRight = (props) => <IconWrapper {...props}><path d="m9 18 6-6-6-6"/></IconWrapper>;
+        const ChevronDown = (props) => <IconWrapper {...props}><path d="m6 9 6 6 6-6"/></IconWrapper>;
+        const FileText = (props) => <IconWrapper {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconWrapper>;
+        const Star = (props) => <IconWrapper {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconWrapper>;
+        const Printer = (props) => <IconWrapper {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></IconWrapper>;
+        const Coffee = (props) => <IconWrapper {...props}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconWrapper>;
+        const Trash2 = (props) => <IconWrapper {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconWrapper>;
+        const Tv = (props) => <IconWrapper {...props}><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></IconWrapper>;
+        const Moon = (props) => <IconWrapper {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></IconWrapper>;
+        const Bug = (props) => <IconWrapper {...props}><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></IconWrapper>;
+        const Users = (props) => <IconWrapper {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconWrapper>;
+        const Utensils = (props) => <IconWrapper {...props}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></IconWrapper>;
+        const Droplet = (props) => <IconWrapper {...props}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></IconWrapper>;
+        const Cat = (props) => <IconWrapper {...props}><path d="M12 5c.67 0 1.35.09 2 .26 1.78-2 5.03-2.84 6.42-2.26 1.4.58-.42 7-.42 7 .57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3.1-9-7.56c0-1.25.5-2.4 1-3.44 0 0-1.89-6.42-.5-7 1.39-.58 4.67.26 6.43 2.26.64-.17 1.33-.26 2-.26z"/><path d="M9 13h.01"/><path d="M15 13h.01"/></IconWrapper>;
+        const ShoppingBag = (props) => <IconWrapper {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></IconWrapper>;
+        const Gavel = (props) => <IconWrapper {...props}><path d="m14 13-7.5 7.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L11 10"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/></IconWrapper>;
+        const Volume2 = (props) => <IconWrapper {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></IconWrapper>;
+        const Award = (props) => <IconWrapper {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></IconWrapper>;
+
+        // --- HELPER FUNCTIONS ---
+        const cleanText = (text) => {
+          if (!text) return "";
+          return text.replace(/\*\*/g, '').replace(/\*/g, '');
+        };
+
+        // --- UI COMPONENTS ---
+        const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '' }) => {
+          const baseStyle = "w-full py-4 px-6 font-mono text-sm uppercase tracking-wider font-bold transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden select-none touch-manipulation transform active:scale-95 rounded-sm";
+          
+          const variants = {
+            primary: "bg-stone-900 text-amber-50 hover:bg-stone-800 border-b-4 border-amber-700 shadow-xl",
+            secondary: "bg-stone-200 text-stone-800 hover:bg-stone-300 border-b-4 border-stone-400 shadow-md",
+            action: "bg-amber-700 text-white hover:bg-amber-800 border-b-4 border-amber-900 shadow-xl"
+          };
+          return (
+            <button 
+              onClick={onClick} 
+              disabled={disabled}
+              className={`${baseStyle} ${variants[variant]} ${disabled ? 'opacity-50 cursor-not-allowed border-none' : ''} ${className}`}
+            >
+              {children}
+            </button>
+          );
+        };
+
+        const InputField = ({ label, value, onChange, placeholder, icon: Icon, className = "" }) => (
+          <div className={`mb-6 ${className}`}>
+            <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-2 flex items-center gap-2">
+              {Icon && <Icon size={18} className="text-amber-700" />}
+              {label}
+            </label>
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              className="w-full bg-stone-50 border-b-2 border-stone-300 text-stone-900 p-4 text-base font-serif focus:outline-none focus:border-amber-600 focus:bg-white transition-colors placeholder-stone-400 rounded-t-md shadow-sm"
+            />
+          </div>
+        );
+
+        const SelectField = ({ label, value, onChange, options, icon: Icon }) => (
+          <div className="mb-6">
+             <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-2 flex items-center gap-2">
+              {Icon && <Icon size={18} className="text-amber-700" />}
+              {label}
+            </label>
+            <div className="relative">
+              <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full bg-stone-50 border-b-2 border-stone-300 text-stone-900 p-4 text-base font-serif focus:outline-none focus:border-amber-600 focus:bg-white transition-colors appearance-none rounded-t-md cursor-pointer pr-10 shadow-sm"
+              >
+                <option value="" disabled>-- Оберіть рішення --</option>
+                {options.map((opt, i) => (
+                  <option key={i} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">
+                <ChevronDown size={24} />
+              </div>
+            </div>
+          </div>
+        );
+
+        const SliderField = ({ label, value, onChange, min, max, icon: Icon, getLabel }) => (
+            <div className="mb-6 p-5 bg-stone-100 rounded border border-stone-200 shadow-sm">
+                <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-4 flex items-center gap-2">
+                    {Icon && <Icon size={18} className="text-amber-700" />}
+                    {label}
+                </label>
+                <div className="flex items-center gap-4">
+                    <input 
+                        type="range" 
+                        min={min} 
+                        max={max} 
+                        value={value} 
+                        onChange={(e) => onChange(Number(e.target.value))}
+                        className="w-full h-2 bg-stone-300 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="w-14 text-center font-bold text-xl font-serif text-amber-800">{value}</div>
+                </div>
+                <div className="mt-3 text-right text-xs font-mono font-bold text-amber-700 uppercase tracking-wide">
+                    {getLabel(value)}
+                </div>
+            </div>
+        );
+
+        const ToggleAsset = ({ label, checked, onChange, icon: Icon }) => (
+            <div 
+                onClick={() => onChange(!checked)}
+                className={`cursor-pointer p-4 rounded border transition-all duration-200 flex items-center justify-between gap-3 mb-3 ${checked ? 'bg-stone-800 border-stone-900 text-amber-50 shadow-lg transform scale-[1.01]' : 'bg-white border-stone-300 text-stone-500 hover:bg-stone-50'}`}
+            >
+                <div className="flex items-center gap-3">
+                    {Icon && <Icon size={22} className={checked ? "text-amber-500" : "text-stone-400"} />}
+                    <span className="font-bold text-sm uppercase tracking-wide">{label}</span>
+                </div>
+                <div className={`w-6 h-6 rounded-sm border-2 flex items-center justify-center ${checked ? 'border-amber-500 bg-amber-600' : 'border-stone-300'}`}>
+                    {checked && <ChevronDown size={18} className="text-white" />}
+                </div>
+            </div>
+        );
+
+        const SectionHeader = ({ title, step }) => (
+          <div className="flex items-center gap-4 my-10">
+            <div className="h-px bg-stone-300 flex-grow"></div>
+            <div className="flex flex-col items-center">
+                <span className="text-xs font-mono uppercase tracking-widest text-amber-700 font-bold mb-1">Сектор {step}</span>
+                <span className="text-sm font-black uppercase tracking-wide text-stone-800 text-center">{title}</span>
+            </div>
+            <div className="h-px bg-stone-300 flex-grow"></div>
+          </div>
+        );
+
+        const Card = ({ children, title, subtitle, className = '' }) => (
+          <div className={`w-full max-w-md mx-auto bg-[#f4f4f0] shadow-2xl border border-stone-300 relative ${className}`}>
+            <div className="absolute -top-3 left-0 w-full flex justify-between px-2">
+                 <div className="bg-stone-800 text-amber-50 px-4 py-1 text-[10px] font-mono uppercase tracking-widest shadow-sm z-20">
+                    CLASSIFIED // EYES ONLY
+                 </div>
+                 <div className="flex gap-1 pt-1">
+                    <div className="w-2 h-2 bg-stone-300 rounded-full"></div>
+                    <div className="w-2 h-2 bg-stone-300 rounded-full"></div>
+                    <div className="w-2 h-2 bg-stone-300 rounded-full"></div>
+                 </div>
+            </div>
+            
+            <div className="p-5 pt-10 pb-16 relative overflow-hidden">
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03]">
+                <Shield size={300} />
+              </div>
+              {title && (
+                <div className="mb-8 border-b-4 border-double border-stone-300 pb-4 text-center relative z-10">
+                  <h2 className="text-2xl md:text-3xl font-black text-stone-900 uppercase tracking-tighter font-serif leading-tight mb-2">
+                    {title}
+                  </h2>
+                  {subtitle && <p className="text-amber-700 font-mono text-xs mt-2 uppercase tracking-widest font-bold">{subtitle}</p>}
+                </div>
+              )}
+              
+              <div className="relative z-10">
+                {children}
+              </div>
+              
+              <div className="absolute bottom-4 right-4 opacity-10 rotate-[-15deg] border-4 border-stone-900 text-stone-900 p-2 font-black text-lg uppercase rounded pointer-events-none z-0">
+                ТІЛЬКИ ДЛЯ СЛУЖБОВОГО КОРИСТУВАННЯ
+              </div>
+            </div>
+          </div>
+        );
+
+        // --- MAIN APP ---
+        function FamilyStatuteApp() {
+          const [step, setStep] = useState('intro'); 
+          const [error, setError] = useState(null);
+          const [generatedStatute, setGeneratedStatute] = useState('');
+          const [loadingLogs, setLoadingLogs] = useState([]);
+          
+          // Initial State
+          const [formData, setFormData] = useState({
+            husbandName: '',
+            husbandRank: '', // NEW
+            husbandCallsign: '',
+            wifeName: '',
+            wifeRank: '', // NEW
+            wifeCallsign: '',
+            
+            // Select Inputs
+            financeChief: '', 
+            foodSupply: '', 
+            dishWashing: '',
+            garbageDisposal: '',
+            conflictWeaponWife: '',
+            conflictWeaponHusband: '',
+            peaceTreaty: '',
+            decisionMaking: '',
+            shoppingLogistics: '',
+            spiderProtocol: '',
+            inLawsDiplomacy: '',
+            
+            // Sliders
+            patienceLevelHusband: 50,
+            patienceLevelWife: 50,
+            
+            // Toggles
+            cats: {
+                cat1: false,
+                cat2: false
+            },
+            
+            // Text inputs
+            strategicGoal: '',
+            morningBathroom: '',
+          });
+
+          const toggleCat = (key) => {
+              setFormData(prev => ({
+                  ...prev,
+                  cats: { ...prev.cats, [key]: !prev.cats[key] }
+              }));
+          };
+
+          useEffect(() => {
+            if (step === 'generating') {
+                const logs = [
+                    "Встановлення захищеного з'єднання...",
+                    "Ідентифікація особового складу...",
+                    "Аналіз розвідувальних даних...",
+                    "Узгодження бюджету...",
+                    "Сканування присутності агентів Персевіренс та К'юріосіті...",
+                    "Кодифікація сімейних цінностей...",
+                    "Формування бойового наказу...",
+                    "Друк документу...",
+                    "Фінальна вичитка..."
+                ];
+                let currentIndex = 0;
+                const interval = setInterval(() => {
+                    if (currentIndex < logs.length) {
+                        setLoadingLogs(prev => [...prev, logs[currentIndex]]);
+                        currentIndex++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 1500);
+                return () => clearInterval(interval);
+            } else {
+                setLoadingLogs([]);
+            }
+          }, [step]);
+
+          // --- ОНОВЛЕНА ФУНКЦІЯ ГЕНЕРАЦІЇ ЧЕРЕЗ GEMINI API ---
+          const generateDirectly = async () => {
+            setStep('generating');
+            setError(null);
+            try {
+              const catsSelected = [];
+              if (formData.cats.cat1) catsSelected.push("Кіт Персевіренс");
+              if (formData.cats.cat2) catsSelected.push("Кіт К'юріосіті");
+              
+              const catsStatus = catsSelected.length > 0 ? `Позаштатні бійці: ${catsSelected.join(" та ")}` : "Тимчасова відсутність котів";
+
+              const husbandTitle = formData.husbandRank || "Чоловік";
+              const wifeTitle = formData.wifeRank || "Дружина";
+              
+              const safeData = {
+                 husbandName: formData.husbandName || "Чоловік",
+                 husbandRank: husbandTitle,
+                 husbandCallsign: formData.husbandCallsign || "V",
+                 
+                 wifeName: formData.wifeName || "Дружина",
+                 wifeRank: wifeTitle,
+                 wifeCallsign: formData.wifeCallsign || "Квіточка",
+                 
+                 financeChief: formData.financeChief || "Спільний котел",
+                 foodSupply: formData.foodSupply || "Доставка",
+                 dishWashing: formData.dishWashing || "Посудомийка",
+                 garbageDisposal: formData.garbageDisposal || "По черзі",
+                 conflictWeaponWife: formData.conflictWeaponWife || "Мовчання",
+                 conflictWeaponHusband: formData.conflictWeaponHusband || "Відступ",
+                 peaceTreaty: formData.peaceTreaty || "Переговори",
+                 decisionMaking: formData.decisionMaking || "Рада",
+                 shoppingLogistics: formData.shoppingLogistics || "Разом",
+                 spiderProtocol: formData.spiderProtocol || "Евакуація",
+                 inLawsDiplomacy: formData.inLawsDiplomacy || "Нейтралітет",
+                 strategicGoal: formData.strategicGoal || "Щастя",
+                 morningBathroom: formData.morningBathroom || "Хто встиг",
+                 patienceLevelHusband: formData.patienceLevelHusband,
+                 patienceLevelWife: formData.patienceLevelWife,
+              };
+
+              const systemPrompt = `
+                Ти - досвідчений штабний писар з бездоганним знанням статутів та добрим гумором.
+                Твоє завдання: Скласти "Бойовий Статут Сімейного Життя" (БССЖ) для молодят Віктора та Насті.
+                
+                КОНТЕКСТ:
+                Дата створення підрозділу: 19.11.2025.
+                Документ адресується виключно молодятам. Не згадуй про третіх осіб (братів, родичів).
+                
+                УВАГА ДО ТЕРМІНОЛОГІЇ (КРИТИЧНО ВАЖЛИВО):
+                1. Використовуй ОФІЦІЙНІ назви служб тилу ЗСУ, але адаптуй їх до побуту.
+                2. "Продовольча служба" - відповідає за їжу.
+                3. "Фінансова служба" - відповідає за гроші. Це окрема служба.
+                4. "Речова служба" або "Служба матеріально-технічного забезпечення" (МТЗ) - відповідає за покупки, майно.
+                5. "МПЗ" (Морально-психологічне забезпечення) - відповідає за настрій, примирення.
+                6. НІКОЛИ не пиши "Начфін" чи "Начпрод" у дужках після назви служби. Просто пиши "Фінансова служба" або "Продовольча служба".
+                7. Уникай політичних термінів (мінські домовленості). Використовуй "Подружні домовленості", "Пакт про кохання".
+                8. Щодо їжі: "Особовий склад зобов'язаний завчасно подавати заявки на харчове постачання", а не "командири".
+                9. Віктор - не сапер. Не згадуй про розмінування.
+
+                ОСОБОВИЙ СКЛАД:
+                - ${safeData.husbandRank} ${safeData.husbandName} (Позивний: ${safeData.husbandCallsign})
+                - ${safeData.wifeRank} ${safeData.wifeName} (Позивний: ${safeData.wifeCallsign})
+                - Додатковий склад: ${catsStatus}.
+
+                РОЗВІДУВАЛЬНІ ДАНІ:
+                1. Фінансова служба: ${safeData.financeChief}
+                2. Продовольча служба (Їжа): ${safeData.foodSupply}
+                3. Дезактивація посуду: ${safeData.dishWashing}
+                4. Служба утилізації відходів (Сміття): ${safeData.garbageDisposal}
+                5. Тактика під час сварки (Дружина): ${safeData.conflictWeaponWife}
+                6. Тактика під час сварки (Чоловік): ${safeData.conflictWeaponHusband}
+                7. Протокол відновлення миру: ${safeData.peaceTreaty}
+                8. Порядок прийняття рішень: ${safeData.decisionMaking}
+                9. МТЗ (Покупки): ${safeData.shoppingLogistics}
+                10. Реагування на біологічні загрози (Павуки): ${safeData.spiderProtocol}
+                11. Зовнішні зв'язки (Батьки): ${safeData.inLawsDiplomacy}
+                12. Зайняття стратегічних висот (Ванна): ${safeData.morningBathroom}
+                13. Рівень терпіння (${safeData.husbandRank}): ${safeData.patienceLevelHusband}%
+                14. Рівень терпіння (${safeData.wifeRank}): ${safeData.patienceLevelWife}%
+                15. Стратегічна ціль: ${safeData.strategicGoal}
+
+                СТРУКТУРА (Markdown):
+                1. Заголовок (Наказ № 19-11/2025).
+                2. Преамбула (Урочисте оголошення про створення підрозділу).
+                3. Розділ I: Тилове та Матеріальне Забезпечення (Їжа, МТЗ, Фінанси, Сміття, Посуд).
+                4. Розділ II: Внутрішній Порядок та Розпорядок (Ванна, Коти).
+                5. Розділ III: Морально-Психологічне Забезпечення (МПЗ) (Сварки, Терпіння, Примирення).
+                6. Розділ IV: Зовнішні Зв'язки та Безпека (Родичі, Павуки).
+                7. Розділ V: Бойовий Наказ (Стратегічна ціль).
+
+                Тон: Теплий, дотепний, з повагою до військової справи, українська мова. Без жирного шрифту.
+              `;
+              
+              // --- ПРЯМИЙ ВИКЛИК GEMINI API ---
+              // Використовуємо новітню модель gemini-2.5-pro
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${API_KEY}`, {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: systemPrompt }]
+                    }]
+                  })
+              });
+
+              if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(errorData.error?.message || "Помилка сервера AI");
+              }
+
+              const data = await response.json();
+              // Отримання тексту з відповіді Gemini
+              const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+              if (!generatedText) {
+                  throw new Error("Отримана порожня відповідь");
+              }
+
+              setGeneratedStatute(generatedText);
+              setStep('result');
+            } catch (err) {
+              console.error("Error:", err);
+              setError("Штаб не відповідає. Спробуйте пізніше. " + err.message);
+              setStep('quiz');
+            }
+          };
+
+          const renderIntro = () => (
+            <Card title="Ініціалізація Підрозділу" subtitle="Створення нової тактичної одиниці">
+              <div className="space-y-6">
+                <div className="flex flex-col gap-6">
+                  <div className="bg-white p-5 rounded border border-stone-200 shadow-sm">
+                    <div className="mb-4 bg-stone-900 text-white text-xs font-bold px-2 py-1 inline-block uppercase tracking-wider">Особовий склад</div>
+                    <InputField 
+                      label="Ім'я Нареченого" 
+                      value={formData.husbandName} 
+                      onChange={(v) => setFormData({...formData, husbandName: v})}
+                      placeholder=""
+                      icon={Star}
+                    />
+                    <InputField 
+                      label="Звання" 
+                      value={formData.husbandRank} 
+                      onChange={(v) => setFormData({...formData, husbandRank: v})}
+                      placeholder=""
+                      icon={Award}
+                    /> 
+                    <InputField 
+                      label="Позивний" 
+                      value={formData.husbandCallsign} 
+                      onChange={(v) => setFormData({...formData, husbandCallsign: v})}
+                      placeholder=""
+                      icon={Shield}
+                      className="mb-0"
+                    />
+                  </div>
+                  <div className="bg-white p-5 rounded border border-stone-200 shadow-sm">
+                    <div className="mb-4 bg-amber-700 text-white text-xs font-bold px-2 py-1 inline-block uppercase tracking-wider">Особовий склад</div>
+                    <InputField 
+                      label="Ім'я Нареченої" 
+                      value={formData.wifeName} 
+                      onChange={(v) => setFormData({...formData, wifeName: v})}
+                      placeholder=""
+                      icon={Heart}
+                    />
+                    <InputField 
+                      label="Звання" 
+                      value={formData.wifeRank} 
+                      onChange={(v) => setFormData({...formData, wifeRank: v})}
+                      placeholder=""
+                      icon={Award}
+                    /> 
+                    <InputField 
+                      label="Позивний" 
+                      value={formData.wifeCallsign} 
+                      onChange={(v) => setFormData({...formData, wifeCallsign: v})}
+                      placeholder=""
+                      icon={Shield}
+                      className="mb-0"
+                    />
+                  </div>
+                </div>
+                <div className="pt-4 pb-4">
+                  <Button onClick={() => setStep('quiz')} disabled={!formData.husbandName || !formData.wifeName} variant="action">
+                    Розпочати злагодження <ChevronRight />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          );
+
+          const renderQuiz = () => (
+            <Card title="Тактичний Опитувальник" subtitle="Збір розвідданих">
+              <div className="space-y-2">
+                
+                {/* БЛОК 1 */}
+                <SectionHeader title="Служби Тилу" step="I" />
+                <div className="flex flex-col gap-0">
+                   <SelectField label="Фінансова служба" value={formData.financeChief} onChange={(v) => setFormData({...formData, financeChief: v})}
+                      options={["Спільний котел НАТО", "Кожен ховає своє", "Вона - Міністр, я - спонсор"]} icon={FileText} />
+                   <SelectField label="Продовольча служба" value={formData.foodSupply} onChange={(v) => setFormData({...formData, foodSupply: v})}
+                      options={["Чоловік - шеф, дружина - дегустатор", "Спільна польова кухня", "Аутсорс (доставка)", "Тільки ресторан"]} icon={Utensils} />
+                   <SelectField label="Дезактивація посуду" value={formData.dishWashing} onChange={(v) => setFormData({...formData, dishWashing: v})}
+                      options={["Посудомийна машина", "Хто останній їв", "По черзі", "Камінь-ножиці-папір"]} icon={Droplet} />
+                   <SelectField label="МТЗ (Покупки)" value={formData.shoppingLogistics} onChange={(v) => setFormData({...formData, shoppingLogistics: v})}
+                      options={["Спільний рейд", "Дружина обирає, чоловік несе", "Онлайн-доставка", "Кожен собі"]} icon={ShoppingBag} />
+                </div>
+
+                {/* БЛОК 2 */}
+                <SectionHeader title="Внутрішній Порядок" step="II" />
+                <div className="flex flex-col gap-0">
+                    <SelectField label="Зайняття ванної (ранком)" value={formData.morningBathroom} onChange={(v) => setFormData({...formData, morningBathroom: v})}
+                      options={["Хто перший встав", "Дружина має пріоритет", "Жива черга", "Спільні процедури"]} icon={Coffee} />
+                    <SelectField label="Утилізація відходів" value={formData.garbageDisposal} onChange={(v) => setFormData({...formData, garbageDisposal: v})}
+                      options={["Чоловік", "Хто йде гуляти", "По черзі", "Накопичуємо до критичної маси"]} icon={Trash2} />
+                    <SelectField label="Прийняття рішень" value={formData.decisionMaking} onChange={(v) => setFormData({...formData, decisionMaking: v})}
+                      options={["Консенсус", "Чоловік - стратег, Дружина - тактик", "Рада старійшин", "Підкидання монети"]} icon={Gavel} />
+                    
+                    <div className="mt-4 mb-6">
+                        <div className="bg-white p-5 rounded border border-stone-200 shadow-inner">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-stone-600 mb-4 flex items-center gap-2"><Cat size={18} className="text-amber-700"/> Позаштатні бійці</label>
+                            <div className="flex flex-col gap-3">
+                                <ToggleAsset label="Кіт Персевіренс (В строю)" checked={formData.cats.cat1} onChange={() => toggleCat('cat1')} icon={Cat} />
+                                <ToggleAsset label="Кіт К'юріосіті (В строю)" checked={formData.cats.cat2} onChange={() => toggleCat('cat2')} icon={Cat} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* БЛОК 3 */}
+                <SectionHeader title="МПЗ та Безпека" step="III" />
+                <div className="flex flex-col gap-0">
+                    <SelectField label="Тактика Дружини під час сварки" value={formData.conflictWeaponWife} onChange={(v) => setFormData({...formData, conflictWeaponWife: v})}
+                      options={["Тактичне мовчання", "Артилерійський крик", "Сльозогінний газ (сльози)", "Дипломатичні аргументи"]} icon={AlertCircle} />
+                    <SelectField label="Тактика Чоловіка під час сварки" value={formData.conflictWeaponHusband} onChange={(v) => setFormData({...formData, conflictWeaponHusband: v})}
+                      options={["Стратегічний відступ", "Глуха оборона (Мороз)", "Контратака жартами", "Визнання провини"]} icon={Shield} />
+                    <SelectField label="Спосіб примирення" value={formData.peaceTreaty} onChange={(v) => setFormData({...formData, peaceTreaty: v})}
+                      options={["Стіл переговорів (вечеря)", "Обмін полоненими (подарунки)", "Пакт про кохання (обійми)", "Бурхливе перемир'я (ліжко)"]} icon={Heart} />
+                    <SelectField label="Протокол 'Павук'" value={formData.spiderProtocol} onChange={(v) => setFormData({...formData, spiderProtocol: v})}
+                      options={["Чоловік ліквідує", "Евакуація всього будинку", "Він тепер живе з нами", "Дружина розбирається"]} icon={Bug} />
+                    <SelectField label="Зовнішні зв'язки (Батьки)" value={formData.inLawsDiplomacy} onChange={(v) => setFormData({...formData, inLawsDiplomacy: v})}
+                      options={["Дипломатичний нейтралітет", "Повна інтеграція", "Візовий режим", "Тільки по святах"]} icon={Users} />
+                </div>
+
+                {/* Слайдери */}
+                <div className="mt-6 flex flex-col gap-4">
+                    <SliderField label={`Рівень терпіння (${formData.husbandName || "Чоловік"})`} value={formData.patienceLevelHusband} onChange={(v) => setFormData({...formData, patienceLevelHusband: v})} min={0} max={100} icon={Volume2} 
+                        getLabel={(v) => v < 20 ? "Критичний" : v < 80 ? "Стабільний" : "Залізобетон"} />
+                    <SliderField label={`Рівень терпіння (${formData.wifeName || "Дружина"})`} value={formData.patienceLevelWife} onChange={(v) => setFormData({...formData, patienceLevelWife: v})} min={0} max={100} icon={Volume2} 
+                        getLabel={(v) => v < 20 ? "Критичний" : v < 80 ? "Стабільний" : "Ангельський"} />
+                </div>
+                
+                <div className="bg-stone-100 p-5 rounded border border-stone-200 mt-4 mb-4">
+                    <InputField label="Головна стратегічна ціль (текстом)" value={formData.strategicGoal} onChange={(v) => setFormData({...formData, strategicGoal: v})} placeholder="" icon={Star} className="mb-0" />
+                </div>
+
+                {error && (
+                  <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mt-6 flex items-start gap-3">
+                    <AlertCircle className="mt-1 flex-shrink-0" />
+                    <div><strong className="font-bold block">Увага!</strong><span>{error}</span></div>
+                  </div>
+                )}
+
+                <div className="pt-8 flex flex-col gap-4 pb-4">
+                   <Button onClick={generateDirectly} variant="action" className="animate-radar">ЗАТВЕРДИТИ СТАТУТ <Send size={16} /></Button>
+                   <Button variant="secondary" onClick={() => setStep('intro')}>Назад</Button>
+                </div>
+              </div>
+            </Card>
+          );
+
+          const renderLoading = () => (
+             <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+              <div className="w-20 h-20 border-4 border-stone-300 border-t-amber-600 rounded-full animate-spin mb-8"></div>
+              <h2 className="text-xl font-bold text-stone-800 mb-6 font-mono uppercase">ОБРОБКА ДАНИХ У ШТАБІ</h2>
+              <div className="w-full max-w-xs bg-stone-900 p-4 rounded-lg shadow-inner text-left h-48 overflow-y-auto font-mono text-xs text-green-500 border border-stone-600">
+                {loadingLogs.map((log, index) => (
+                    <div key={index} className="mb-2"><span className="opacity-50">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}]</span> {log}</div>
+                ))}
+                <div className="cursor-blink">_</div>
+              </div>
+              <p className="text-stone-500 mt-4 text-xs uppercase tracking-widest">Система "Гіменей"</p>
+            </div>
+          );
+
+          const renderResult = () => (
+            <div className="max-w-4xl mx-auto py-4 md:py-8 px-4">
+              <div className="mb-6 flex flex-col gap-4 no-print">
+                <Button onClick={() => window.print()} variant="primary"><Printer size={16} /> ДРУКУВАТИ НАКАЗ</Button>
+                <Button variant="secondary" onClick={() => setStep('intro')}>Новий рапорт</Button>
+              </div>
+              
+              <div className="bg-[#fffdf5] text-stone-900 p-6 md:p-12 shadow-2xl border border-stone-300 relative print-container paper-texture">
+                <div className="border-b-4 border-double border-stone-800 pb-6 mb-8 flex flex-col gap-4">
+                  <div>
+                     <div className="text-amber-800 font-bold text-xs uppercase tracking-[0.2em] mb-2 text-center md:text-left">Міністерство Щасливих Справ</div>
+                     <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter font-serif text-stone-900 leading-tight text-center md:text-left">Бойовий Статут<br/>Сімейного Корпусу</h1>
+                  </div>
+                  <div className="text-center md:text-right">
+                     <div className="inline-flex items-center gap-2 text-stone-600 border border-stone-800 px-3 py-1 rounded-sm">
+                        <Shield size={14} /><span className="font-mono text-xs uppercase font-bold">Наказ № 19-11/2025</span>
+                     </div>
+                  </div>
+                </div>
+
+                <div className="prose prose-stone max-w-none font-serif leading-relaxed whitespace-pre-line text-stone-800">
+                    {generatedStatute.split('\n').map((line, i) => {
+                        let cleanedLine = cleanText(line).trim();
+                        if (!cleanedLine) return <br key={i}/>;
+                        
+                        if (cleanedLine.startsWith('#')) {
+                           const textWithoutHashes = cleanedLine.replace(/^#+\s*/, '');
+                           if (cleanedLine.startsWith('# ')) {
+                                return <h2 key={i} className="text-xl font-black mt-8 mb-4 text-center uppercase tracking-widest text-stone-900 border-b-2 border-amber-700 pb-2 inline-block w-full">{textWithoutHashes}</h2>;
+                           }
+                           return <h3 key={i} className="text-lg font-bold mt-6 mb-2 uppercase text-amber-900 flex items-center gap-2"><div className="w-2 h-2 bg-amber-700 rounded-full flex-shrink-0"></div>{textWithoutHashes}</h3>;
+                        }
+                        
+                        if (cleanedLine.startsWith('-') || cleanedLine.startsWith('*')) {
+                            return <div key={i} className="flex gap-3 ml-0 mb-3 items-start"><span className="text-amber-700 mt-1.5 text-xs flex-shrink-0">●</span><span className="text-justify">{cleanedLine.replace(/^[-*]\s*/, '')}</span></div>;
+                        }
+                        return <p key={i} className="mb-3 text-justify">{cleanedLine}</p>;
+                    })}
+                </div>
+
+                <div className="mt-16 pt-8 border-t border-stone-400 flex flex-col gap-12 break-inside-avoid">
+                  <div className="relative">
+                    <p className="text-[10px] font-bold uppercase mb-8 tracking-widest text-stone-500">Затверджую ({formData.husbandRank})</p>
+                    <div className="font-serif text-2xl text-blue-900 absolute top-6 left-4 -rotate-2 opacity-80 italic">{formData.husbandName}</div>
+                    <div className="h-0.5 bg-stone-900 w-full mt-8"></div>
+                  </div>
+                  <div className="relative">
+                    <p className="text-[10px] font-bold uppercase mb-8 tracking-widest text-stone-500">Погоджено ({formData.wifeRank})</p>
+                    <div className="font-serif text-2xl text-red-900 absolute top-6 left-4 -rotate-1 opacity-80 italic">{formData.wifeName}</div>
+                    <div className="h-0.5 bg-stone-900 w-full mt-8"></div>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-32 right-6 opacity-80 rotate-[-12deg] border-[6px] border-amber-800 text-amber-800 px-4 py-2 font-black text-lg uppercase rounded shadow-inner hidden md:block print:block mix-blend-multiply">
+                  ЦІЛКОМ ТАЄМНО<br/><span className="text-xs font-mono block text-center mt-1">ОБ'ЄКТ: ЩАСЛИВА СІМ'Я</span>
+                </div>
+              </div>
+            </div>
+          );
+
+          return (
+            <div className="min-h-screen pb-10 md:pb-20">
+              <header className="bg-stone-900 text-amber-500 p-4 text-center shadow-lg no-print relative overflow-hidden sticky top-0 z-50">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-stone-900 via-amber-600 to-stone-900"></div>
+                <div className="flex justify-center items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em]">
+                    <Star size={12} /> Military-Grade Family Planning System v3.7 <Star size={12} />
+                </div>
+              </header>
+              <main className="container mx-auto pt-6 px-4 print:pt-0 print:px-0 print:max-w-none">
+                {step === 'intro' && renderIntro()}
+                {step === 'quiz' && renderQuiz()}
+                {step === 'generating' && renderLoading()}
+                {step === 'result' && renderResult()}
+              </main>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FamilyStatuteApp />);
+    </script>
+</body>
+</html>
