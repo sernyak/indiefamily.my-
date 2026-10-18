@@ -90,7 +90,7 @@
         const { useState, useEffect, useRef } = React; 
 
         // --- КОНФІГУРАЦІЯ API ---
-        const API_KEY = "AIzaSyA4TNXtd_TTyz7QFKiXVPIPReHFRySlTeo";
+        const API_KEY = ""; // ключ прибрано 2026-10-19: він лежав у відкритому коді
 
         // --- ICONS ---
         const IconWrapper = ({ children, size = 24, className = "" }) => (
@@ -380,6 +380,10 @@
 
           // --- ОНОВЛЕНА ФУНКЦІЯ ГЕНЕРАЦІЇ ЧЕРЕЗ GEMINI API ---
           const generateDirectly = async () => {
+            // Генерацію через Gemini вимкнено 2026-10-19: ключ лежав у відкритому коді сторінки.
+            setError("Генерацію наказу тимчасово вимкнено.");
+            setStep('quiz');
+            return;
             setStep('generating');
             setError(null);
             try {
